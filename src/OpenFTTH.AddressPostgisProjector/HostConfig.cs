@@ -34,6 +34,7 @@ internal static class HostConfig
         {
             services.AddHostedService<AddressPostgisProjectorHost>();
             services.AddSingleton<Setting>(setting);
+            services.AddSingleton<IPostgisAddressImport, PostgisAddressImport>();
             services.AddSingleton<IEventStore>(
                 e =>
                 new PostgresEventStore(

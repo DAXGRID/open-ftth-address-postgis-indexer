@@ -9,3 +9,6 @@ dotnet_diagnostic.CA1848.severity = none
 # CA1812: We remove this since we mainly use dependency injection,
 # so a lot of classes might seem that they have not been instantiated.
 dotnet_diagnostic.CA1812.severity = none
+
+# CA2100 no user input in application.
+dotnet_diagnostic.CA2100.severity = none

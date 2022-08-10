@@ -9,14 +9,17 @@ internal sealed class AddressPostgisProjectorHost : BackgroundService
 {
     private readonly ILogger<AddressPostgisProjectorHost> _logger;
     private readonly IEventStore _eventStore;
+    private readonly IPostgisAddressImport _postgisAddressImport;
     private const int _catchUpTimeMs = 60000;
 
     public AddressPostgisProjectorHost(
         ILogger<AddressPostgisProjectorHost> logger,
-        IEventStore eventStore)
+        IEventStore eventStore,
+        IPostgisAddressImport postgisAddressImport)
     {
         _logger = logger;
         _eventStore = eventStore;
+        _postgisAddressImport = postgisAddressImport;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -25,6 +28,8 @@ internal sealed class AddressPostgisProjectorHost : BackgroundService
         {
             _logger.LogInformation(
                 "Starting {HostName}", nameof(AddressPostgisProjectorHost));
+
+            _postgisAddressImport.Init();
 
             _logger.LogInformation("Starting dehydration.");
             await _eventStore
@@ -54,9 +59,14 @@ internal sealed class AddressPostgisProjectorHost : BackgroundService
                 }
             }
         }
+        catch (TaskCanceledException)
+        {
+            // Do nothing since this is valid.
+            _logger.LogError("Cancellation requested.");
+        }
         catch (Exception ex)
         {
-            _logger.LogError("{Exception}", ex);
+            _logger.LogError("{Exception}.", ex);
             throw;
         }
     }
