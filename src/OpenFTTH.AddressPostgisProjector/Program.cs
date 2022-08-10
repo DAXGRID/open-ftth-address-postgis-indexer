@@ -1,10 +1,14 @@
-﻿namespace OpenFTTH.AddressPostgisProjector;
+﻿using Microsoft.Extensions.Hosting;
+
+namespace OpenFTTH.AddressPostgisProjector;
 
 internal static class Program
 {
-    public static void Main()
+    public static async Task Main()
     {
-        Console.WriteLine("Hello, World!");
+        using var host = HostConfig.Configure();
+        await host.StartAsync().ConfigureAwait(false);
+        await host.WaitForShutdownAsync().ConfigureAwait(false);
     }
 }
 
