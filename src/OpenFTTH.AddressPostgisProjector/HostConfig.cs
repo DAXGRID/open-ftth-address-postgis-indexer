@@ -5,7 +5,6 @@ using OpenFTTH.EventSourcing.Postgres;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
-using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 

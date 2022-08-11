@@ -1,19 +1,27 @@
 using Microsoft.Extensions.Logging;
+using OpenFTTH.Core.Address;
 using OpenFTTH.Core.Address.Events;
 using OpenFTTH.EventSourcing;
 
 namespace OpenFTTH.AddressPostgisProjector;
 
 internal sealed record PostCode(string Code, string Name);
+internal sealed record Road(string OfficialId, string Name);
 
 internal sealed record AccessAddress(
     Guid Id,
-    Guid RoadId,
-    string? TownName,
+    string? OfficialId,
+    string MunicipalCode,
+    AccessAddressStatus Status,
+    string RoadCode,
     string HouseNumber,
-    Guid PostCodeId,
+    double EastCoordinate,
     double NorthCoordinate,
-    double EastCoordinate);
+    string? TownName,
+    string? PlotId,
+    Guid RoadId,
+    Guid PostCodeId,
+    bool Deleted);
 
 internal sealed class AddressPostgisProjection : ProjectionBase
 {
@@ -21,7 +29,7 @@ internal sealed class AddressPostgisProjection : ProjectionBase
     private ILogger<AddressPostgisProjection> _logger;
 
     public readonly Dictionary<Guid, PostCode> IdToPostCode = new();
-    public readonly Dictionary<Guid, string> IdToRoadName = new();
+    public readonly Dictionary<Guid, Road> IdToRoad = new();
     public readonly Dictionary<Guid, AccessAddress> IdToAddress = new();
 
     public AddressPostgisProjection(ILogger<AddressPostgisProjection> logger)
@@ -86,15 +94,19 @@ internal sealed class AddressPostgisProjection : ProjectionBase
     {
         IdToAddress.Add(
             accessAddressCreated.Id,
-            new(
-                Id: accessAddressCreated.Id,
-                RoadId: accessAddressCreated.RoadId,
+            new(Id: accessAddressCreated.Id,
+                OfficialId: accessAddressCreated.OfficialId,
+                MunicipalCode: accessAddressCreated.MunicipalCode,
+                Status: accessAddressCreated.Status,
+                RoadCode: accessAddressCreated.RoadCode,
                 HouseNumber: accessAddressCreated.HouseNumber,
-                TownName: accessAddressCreated.TownName,
-                PostCodeId: accessAddressCreated.PostCodeId,
                 NorthCoordinate: accessAddressCreated.NorthCoordinate,
-                EastCoordinate: accessAddressCreated.EastCoordinate
-            ));
+                EastCoordinate: accessAddressCreated.EastCoordinate,
+                TownName: accessAddressCreated.TownName,
+                PlotId: accessAddressCreated.PlotId,
+                RoadId: accessAddressCreated.RoadId,
+                PostCodeId: accessAddressCreated.PostCodeId,
+                Deleted: false));
     }
 
     private void HandleAccessAddressUpdated(AccessAddressUpdated accessAddressUpdated)
@@ -102,17 +114,27 @@ internal sealed class AddressPostgisProjection : ProjectionBase
         var oldAccessAddress = IdToAddress[accessAddressUpdated.Id];
         IdToAddress[accessAddressUpdated.Id] = oldAccessAddress with
         {
-            RoadId = accessAddressUpdated.RoadId,
-            TownName = accessAddressUpdated.TownName,
-            PostCodeId = accessAddressUpdated.PostCodeId,
+            OfficialId = accessAddressUpdated.OfficialId,
+            MunicipalCode = accessAddressUpdated.MunicipalCode,
+            Status = accessAddressUpdated.Status,
+            RoadCode = accessAddressUpdated.RoadCode,
+            HouseNumber = accessAddressUpdated.HouseNumber,
             NorthCoordinate = accessAddressUpdated.NorthCoordinate,
-            EastCoordinate = accessAddressUpdated.EastCoordinate
+            EastCoordinate = accessAddressUpdated.EastCoordinate,
+            TownName = accessAddressUpdated.TownName,
+            PlotId = accessAddressUpdated.PlotId,
+            RoadId = accessAddressUpdated.RoadId,
+            PostCodeId = accessAddressUpdated.PostCodeId,
         };
     }
 
     private void HandleAccessAddressDeleted(AccessAddressDeleted accessAddressDeleted)
     {
-        IdToAddress.Remove(accessAddressDeleted.Id);
+        var oldAccessAddress = IdToAddress[accessAddressDeleted.Id];
+        IdToAddress[accessAddressDeleted.Id] = oldAccessAddress with
+        {
+            Deleted = true
+        };
     }
 
     private void HandlePostCodeCreated(PostCodeCreated postCodeCreated)
@@ -138,17 +160,22 @@ internal sealed class AddressPostgisProjection : ProjectionBase
 
     private void HandleRoadCreated(RoadCreated roadCreated)
     {
-        IdToRoadName.Add(roadCreated.Id, roadCreated.Name);
+        var road = new Road(roadCreated.OfficialId, roadCreated.Name);
+        IdToRoad.Add(roadCreated.Id, road);
     }
 
     private void HandleRoadUpdated(RoadUpdated roadUpdated)
     {
-        IdToRoadName[roadUpdated.Id] = roadUpdated.Name;
+        var road = IdToRoad[roadUpdated.Id];
+        IdToRoad[roadUpdated.Id] = road with
+        {
+            Name = roadUpdated.Name
+        };
     }
 
     private void HandleRoadDeleted(RoadDeleted roadDeleted)
     {
-        IdToRoadName.Remove(roadDeleted.Id);
+        IdToRoad.Remove(roadDeleted.Id);
     }
 
     public override Task DehydrationFinishAsync()

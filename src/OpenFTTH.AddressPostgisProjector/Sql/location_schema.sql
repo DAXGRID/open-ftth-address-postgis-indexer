@@ -15,9 +15,6 @@ CREATE TABLE IF NOT EXISTS location.official_access_address (
 	access_address_external_id varchar(255) NULL,
 	road_external_id varchar(255) NULL,
 	plot_external_id varchar(255) NULL,
-	created timestamptz NULL,
-	updated timestamptz NULL,
-	location_updated timestamptz NULL,
 	deleted bool NOT NULL DEFAULT false,
 	CONSTRAINT official_access_address_pkey PRIMARY KEY (id));
 
@@ -33,8 +30,6 @@ CREATE TABLE IF NOT EXISTS location.official_unit_address (
 	suit_name varchar(80) NULL,
 	unit_address_external_id varchar(255) NULL,
 	access_address_external_id varchar(255) NULL,
-	created timestamptz NULL,
-	updated timestamptz NULL,
 	deleted bool NOT NULL DEFAULT false,
 	CONSTRAINT official_unit_address_pkey PRIMARY KEY (id)
 );

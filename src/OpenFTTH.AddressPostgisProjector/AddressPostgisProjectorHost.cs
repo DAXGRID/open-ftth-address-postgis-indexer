@@ -40,6 +40,11 @@ internal sealed class AddressPostgisProjectorHost : BackgroundService
                 "Memory after dehydration {MibiBytes}.",
                 Process.GetCurrentProcess().PrivateMemorySize64 / 1024 / 1024);
 
+            var projection = _eventStore.Projections.Get<AddressPostgisProjection>();
+
+            _logger.LogInformation("Starting import.");
+            await _postgisAddressImport.Import(projection).ConfigureAwait(false);
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 await Task.Delay(_catchUpTimeMs, stoppingToken).ConfigureAwait(false);
