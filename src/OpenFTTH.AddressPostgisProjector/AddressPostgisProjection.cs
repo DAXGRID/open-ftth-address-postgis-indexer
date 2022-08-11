@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using OpenFTTH.Core.Address;
 using OpenFTTH.Core.Address.Events;
 using OpenFTTH.EventSourcing;
 
@@ -9,10 +8,9 @@ internal sealed record PostCode(string Code, string Name);
 internal sealed record Road(string OfficialId, string Name);
 
 internal sealed record AccessAddress(
-    Guid Id,
     string? OfficialId,
     string MunicipalCode,
-    AccessAddressStatus Status,
+    string Status,
     string RoadCode,
     string HouseNumber,
     double EastCoordinate,
@@ -23,19 +21,24 @@ internal sealed record AccessAddress(
     Guid PostCodeId,
     bool Deleted);
 
+internal sealed record UnitAddress(
+    Guid AccessAddresssId,
+    string Status,
+    string? FloorName,
+    string? SuitName,
+    string? OfficialId,
+    bool Deleted);
+
 internal sealed class AddressPostgisProjection : ProjectionBase
 {
-    private uint _count;
-    private ILogger<AddressPostgisProjection> _logger;
-
+    public int Count;
     public readonly Dictionary<Guid, PostCode> IdToPostCode = new();
     public readonly Dictionary<Guid, Road> IdToRoad = new();
-    public readonly Dictionary<Guid, AccessAddress> IdToAddress = new();
+    public readonly Dictionary<Guid, AccessAddress> IdToAccessAddress = new();
+    public readonly Dictionary<Guid, UnitAddress> IdToUnitAddress = new();
 
     public AddressPostgisProjection(ILogger<AddressPostgisProjection> logger)
     {
-        _logger = logger;
-
         ProjectEventAsync<PostCodeCreated>(ProjectAsync);
         ProjectEventAsync<PostCodeUpdated>(ProjectAsync);
         ProjectEventAsync<PostCodeDeleted>(ProjectAsync);
@@ -47,11 +50,15 @@ internal sealed class AddressPostgisProjection : ProjectionBase
         ProjectEventAsync<AccessAddressCreated>(ProjectAsync);
         ProjectEventAsync<AccessAddressUpdated>(ProjectAsync);
         ProjectEventAsync<AccessAddressDeleted>(ProjectAsync);
+
+        ProjectEventAsync<UnitAddressCreated>(ProjectAsync);
+        ProjectEventAsync<UnitAddressUpdated>(ProjectAsync);
+        ProjectEventAsync<UnitAddressDeleted>(ProjectAsync);
     }
 
     private Task ProjectAsync(IEventEnvelope eventEnvelope)
     {
-        _count++;
+        Count++;
 
         switch (eventEnvelope.Data)
         {
@@ -82,6 +89,15 @@ internal sealed class AddressPostgisProjection : ProjectionBase
             case (AccessAddressDeleted accessAddressDeleted):
                 HandleAccessAddressDeleted(accessAddressDeleted);
                 break;
+            case (UnitAddressCreated unitAddressCreated):
+                HandleUnitAddressCreated(unitAddressCreated);
+                break;
+            case (UnitAddressUpdated unitAddressUpdated):
+                HandleUnitAddressUpdated(unitAddressUpdated);
+                break;
+            case (UnitAddressDeleted unitAddressDeleted):
+                HandleUnitAddressDeleted(unitAddressDeleted);
+                break;
             default:
                 throw new ArgumentException(
                     $"Could not handle typeof '{eventEnvelope.Data.GetType().Name}'");
@@ -92,12 +108,11 @@ internal sealed class AddressPostgisProjection : ProjectionBase
 
     private void HandleAccessAddressCreated(AccessAddressCreated accessAddressCreated)
     {
-        IdToAddress.Add(
+        IdToAccessAddress.Add(
             accessAddressCreated.Id,
-            new(Id: accessAddressCreated.Id,
-                OfficialId: accessAddressCreated.OfficialId,
+            new(OfficialId: accessAddressCreated.OfficialId,
                 MunicipalCode: accessAddressCreated.MunicipalCode,
-                Status: accessAddressCreated.Status,
+                Status: accessAddressCreated.Status.ToString(),
                 RoadCode: accessAddressCreated.RoadCode,
                 HouseNumber: accessAddressCreated.HouseNumber,
                 NorthCoordinate: accessAddressCreated.NorthCoordinate,
@@ -111,12 +126,12 @@ internal sealed class AddressPostgisProjection : ProjectionBase
 
     private void HandleAccessAddressUpdated(AccessAddressUpdated accessAddressUpdated)
     {
-        var oldAccessAddress = IdToAddress[accessAddressUpdated.Id];
-        IdToAddress[accessAddressUpdated.Id] = oldAccessAddress with
+        var oldAccessAddress = IdToAccessAddress[accessAddressUpdated.Id];
+        IdToAccessAddress[accessAddressUpdated.Id] = oldAccessAddress with
         {
             OfficialId = accessAddressUpdated.OfficialId,
             MunicipalCode = accessAddressUpdated.MunicipalCode,
-            Status = accessAddressUpdated.Status,
+            Status = accessAddressUpdated.Status.ToString(),
             RoadCode = accessAddressUpdated.RoadCode,
             HouseNumber = accessAddressUpdated.HouseNumber,
             NorthCoordinate = accessAddressUpdated.NorthCoordinate,
@@ -130,8 +145,44 @@ internal sealed class AddressPostgisProjection : ProjectionBase
 
     private void HandleAccessAddressDeleted(AccessAddressDeleted accessAddressDeleted)
     {
-        var oldAccessAddress = IdToAddress[accessAddressDeleted.Id];
-        IdToAddress[accessAddressDeleted.Id] = oldAccessAddress with
+        var oldAccessAddress = IdToAccessAddress[accessAddressDeleted.Id];
+        IdToAccessAddress[accessAddressDeleted.Id] = oldAccessAddress with
+        {
+            Deleted = true
+        };
+    }
+
+    private void HandleUnitAddressCreated(UnitAddressCreated unitAddressCreated)
+    {
+        IdToUnitAddress.Add(
+            unitAddressCreated.Id,
+            new UnitAddress(
+                OfficialId: unitAddressCreated.OfficialId,
+                AccessAddresssId: unitAddressCreated.AccessAddressId,
+                Status: unitAddressCreated.Status.ToString(),
+                FloorName: unitAddressCreated.FloorName,
+                SuitName: unitAddressCreated.SuitName,
+                Deleted: false
+            ));
+    }
+
+    private void HandleUnitAddressUpdated(UnitAddressUpdated unitAddressUpdated)
+    {
+        var unitAddress = IdToUnitAddress[unitAddressUpdated.Id];
+        IdToUnitAddress[unitAddressUpdated.Id] = unitAddress with
+        {
+            AccessAddresssId = unitAddressUpdated.AccessAddressId,
+            OfficialId = unitAddressUpdated.OfficialId,
+            Status = unitAddressUpdated.Status.ToString(),
+            FloorName = unitAddressUpdated.FloorName,
+            SuitName = unitAddressUpdated.SuitName,
+        };
+    }
+
+    private void HandleUnitAddressDeleted(UnitAddressDeleted unitAddressDeleted)
+    {
+        var unitAddress = IdToUnitAddress[unitAddressDeleted.Id];
+        IdToUnitAddress[unitAddressDeleted.Id] = unitAddress with
         {
             Deleted = true
         };
@@ -176,11 +227,5 @@ internal sealed class AddressPostgisProjection : ProjectionBase
     private void HandleRoadDeleted(RoadDeleted roadDeleted)
     {
         IdToRoad.Remove(roadDeleted.Id);
-    }
-
-    public override Task DehydrationFinishAsync()
-    {
-        _logger.LogInformation("Finished dehydration a total of {Count} events.", _count);
-        return Task.CompletedTask;
     }
 }

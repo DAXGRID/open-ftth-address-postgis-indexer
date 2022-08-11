@@ -45,6 +45,10 @@ internal sealed class AddressPostgisProjectorHost : BackgroundService
             _logger.LogInformation("Starting import.");
             await _postgisAddressImport.Import(projection).ConfigureAwait(false);
 
+            _logger.LogInformation(
+                "Memory after bulk write {MibiBytes}.",
+                Process.GetCurrentProcess().PrivateMemorySize64 / 1024 / 1024);
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 await Task.Delay(_catchUpTimeMs, stoppingToken).ConfigureAwait(false);

@@ -5,7 +5,39 @@ using Npgsql;
 
 namespace OpenFTTH.AddressPostgisProjector;
 
-internal record OfficialAccessAddress
+internal sealed record OfficialUnitAddress
+{
+    public Guid Id { get; init; }
+    public Guid AccessAddressId { get; init; }
+    public string Status { get; init; }
+    public string? FloorName { get; init; }
+    public string? SuitName { get; init; }
+    public string? UnitAddresssExternalId { get; init; }
+    public string? AccessAddressExternalId { get; init; }
+    public bool Deleted { get; init; }
+
+    public OfficialUnitAddress(
+        Guid id,
+        Guid accessAddressId,
+        string status,
+        string? floorName,
+        string? suitName,
+        string? unitAddresssExternalId,
+        string? accessAddressExternalId,
+        bool deleted)
+    {
+        Id = id;
+        AccessAddressId = accessAddressId;
+        Status = status;
+        FloorName = floorName;
+        SuitName = suitName;
+        UnitAddresssExternalId = unitAddresssExternalId;
+        AccessAddressExternalId = accessAddressExternalId;
+        Deleted = deleted;
+    }
+}
+
+internal sealed record OfficialAccessAddress
 {
     public Guid Id { get; init; }
     public string MunicipalCode { get; init; }
@@ -58,38 +90,6 @@ internal record OfficialAccessAddress
     }
 }
 
-internal record OfficialUnitAddress
-{
-    public Guid Id { get; init; }
-    public Guid AccessAddressId { get; init; }
-    public string Status { get; init; }
-    public string FloorName { get; init; }
-    public string SuitName { get; init; }
-    public string UnitAddressExternalId { get; init; }
-    public string AccessAddressExternalId { get; init; }
-    public bool Deleted { get; init; }
-
-    public OfficialUnitAddress(
-        Guid id,
-        Guid accessAddressId,
-        string status,
-        string floorName,
-        string suitName,
-        string unitAddressExternalId,
-        string accessAddressExternalId,
-        bool deleted)
-    {
-        Id = id;
-        AccessAddressId = accessAddressId;
-        Status = status;
-        FloorName = floorName;
-        SuitName = suitName;
-        UnitAddressExternalId = unitAddressExternalId;
-        AccessAddressExternalId = accessAddressExternalId;
-        Deleted = deleted;
-    }
-}
-
 internal class PostgisAddressImport : IPostgisAddressImport
 {
     private readonly Setting _setting;
@@ -112,27 +112,45 @@ internal class PostgisAddressImport : IPostgisAddressImport
 
     public async Task Import(AddressPostgisProjection projection)
     {
+        _logger.LogInformation("Truncate address bulk tables.");
+
+        await TruncateTable("location.official_access_address_bulk")
+            .ConfigureAwait(false);
+
+        await TruncateTable("location.official_unit_address_bulk")
+            .ConfigureAwait(false);
+
+        _logger.LogInformation("Finsihed truncate address bulk tables.");
+
+        _logger.LogInformation("Starting importing addresses.");
+
+        var insertAccessAddresssesTask = InsertOfficalAccessAddresses(projection);
+        var insertUnitAddressesTask = InsertOfficalUnitAddress(projection);
+
+        await Task.WhenAll(insertAccessAddresssesTask, insertUnitAddressesTask)
+            .ConfigureAwait(false);
+
+        _logger.LogInformation("Finished importing addresses.");
+
+        _logger.LogInformation("Starting refreshing views.");
+
+        var refreshAccessAddressTask = RefreshMaterializedView(
+            "location.official_access_address");
+
+        var refreshUnitAddressTask = RefreshMaterializedView(
+            "location.official_unit_address");
+
+        await Task.WhenAll(refreshAccessAddressTask, refreshUnitAddressTask)
+            .ConfigureAwait(false);
+
+        _logger.LogInformation("Finished updating views.");
+    }
+
+    private async Task RefreshMaterializedView(string viewName)
+    {
         using var conn = new NpgsqlConnection(_setting.PostgisConnectionString);
         await conn.OpenAsync().ConfigureAwait(false);
 
-        _logger.LogInformation("Truncate access address table.");
-        await TruncateTable("location.official_access_address_bulk", conn)
-            .ConfigureAwait(false);
-
-        _logger.LogInformation("Starting import access addresses.");
-        await InsertOfficalAccessAddresses(projection, conn).ConfigureAwait(false);
-        _logger.LogInformation("Finished import access addresses.");
-
-        await RefreshMaterializedView("location.official_access_address", conn)
-            .ConfigureAwait(false);
-
-        _logger.LogInformation("Finished updating view.");
-    }
-
-    private static async Task RefreshMaterializedView(
-        string viewName,
-        NpgsqlConnection conn)
-    {
         using var truncateCmd = new NpgsqlCommand(
            $"REFRESH MATERIALIZED VIEW CONCURRENTLY {viewName}", conn);
         truncateCmd.CommandTimeout = 60 * 5;
@@ -140,19 +158,18 @@ internal class PostgisAddressImport : IPostgisAddressImport
         await truncateCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
     }
 
-    private static async Task TruncateTable(
-        string tableName,
-        NpgsqlConnection conn)
+    private async Task TruncateTable(string tableName)
     {
+        using var conn = new NpgsqlConnection(_setting.PostgisConnectionString);
+        await conn.OpenAsync().ConfigureAwait(false);
+
         using var truncateCmd = new NpgsqlCommand(
             $"truncate table {tableName}", conn);
 
         await truncateCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
     }
 
-    private static async Task InsertOfficalAccessAddresses(
-        AddressPostgisProjection projection,
-        NpgsqlConnection conn)
+    private async Task InsertOfficalAccessAddresses(AddressPostgisProjection projection)
     {
         var query = @"
                 COPY location.official_access_address_bulk (
@@ -173,14 +190,17 @@ internal class PostgisAddressImport : IPostgisAddressImport
 
         var wkbWriter = new WKBWriter(ByteOrder.LittleEndian, true, false, false);
 
+        using var conn = new NpgsqlConnection(_setting.PostgisConnectionString);
+        await conn.OpenAsync().ConfigureAwait(false);
+
         using var writer = conn.BeginBinaryImport(query);
 
-        foreach (var pAddress in projection.IdToAddress.Values)
+        foreach (var (key, pAddress) in projection.IdToAccessAddress)
         {
             var postCode = projection.IdToPostCode[pAddress.PostCodeId];
             var road = projection.IdToRoad[pAddress.RoadId];
 
-            var address = MapAccessAddress(postCode, road, pAddress);
+            var address = MapAccessAddress(key, postCode, road, pAddress);
             var point = new Point(address.NorthCoordinate, address.EastCoordinate)
             {
                 SRID = 25832
@@ -190,39 +210,102 @@ internal class PostgisAddressImport : IPostgisAddressImport
                 default,
                 address.Id,
                 wkbWriter.Write(point),
-                address.Status.ToString(),
+                address.Status,
                 address.HouseNumber,
                 address.RoadCode,
                 address.RoadName,
-                address.TownName ?? "",
+                address.TownName is null
+                ? DBNull.Value : address.TownName,
                 address.PostDistrictCode,
                 address.PostDistrictName,
                 address.MunicipalCode,
                 address.AccessAdddressExternalId,
                 address.RoadExternalId,
-                address.PlotExternalId ?? "")
-                .ConfigureAwait(false);
+                address.PlotExternalId is null
+                ? DBNull.Value : address.PlotExternalId
+            ).ConfigureAwait(false);
         }
 
         await writer.CompleteAsync().ConfigureAwait(false);
     }
 
+    private async Task InsertOfficalUnitAddress(AddressPostgisProjection projection)
+    {
+        var query = @"
+                COPY location.official_unit_address_bulk (
+                    id,
+                    access_address_id,
+                    status,
+                    floor_name,
+                    suit_name,
+                    unit_address_external_id,
+                    access_address_external_id,
+                    deleted
+                ) FROM STDIN (FORMAT BINARY)";
+
+        using var conn = new NpgsqlConnection(_setting.PostgisConnectionString);
+        await conn.OpenAsync().ConfigureAwait(false);
+
+        using var writer = conn.BeginBinaryImport(query);
+        foreach (var (k, pUnitAddress) in projection.IdToUnitAddress)
+        {
+            var accessAddressOfficialId = projection
+                .IdToAccessAddress[pUnitAddress.AccessAddresssId].OfficialId;
+
+            var unitAddress = MapUnitAddress(k, accessAddressOfficialId, pUnitAddress);
+
+            await writer.WriteRowAsync(
+                default,
+                unitAddress.Id,
+                unitAddress.AccessAddressId,
+                unitAddress.Status,
+                unitAddress.FloorName is null
+                ? DBNull.Value : unitAddress.FloorName,
+                unitAddress.SuitName is null
+                ? DBNull.Value : unitAddress.SuitName,
+                unitAddress.UnitAddresssExternalId is null
+                ? DBNull.Value : unitAddress.UnitAddresssExternalId,
+                unitAddress.AccessAddressExternalId is null
+                ? DBNull.Value : unitAddress.AccessAddressExternalId,
+                unitAddress.Deleted).ConfigureAwait(false);
+        }
+
+        await writer.CompleteAsync().ConfigureAwait(false);
+    }
+
+    private static OfficialUnitAddress MapUnitAddress(
+            Guid id,
+            string? accessAddressExternalId,
+            UnitAddress address)
+    {
+        return new OfficialUnitAddress(
+            id: id,
+            accessAddressId: address.AccessAddresssId,
+            status: address.Status,
+            floorName: address.FloorName,
+            suitName: address.SuitName,
+            unitAddresssExternalId: address.OfficialId,
+            accessAddressExternalId: accessAddressExternalId,
+            deleted: address.Deleted);
+    }
+
     private static OfficialAccessAddress MapAccessAddress(
+        Guid id,
         PostCode postCode,
         Road road,
         AccessAddress address)
     {
         return new OfficialAccessAddress(
-            id: address.Id,
+            id: id,
             municipalCode: address.MunicipalCode,
-            status: address.Status.ToString(),
+            status: address.Status,
             roadCode: address.RoadCode,
             houseNumber: address.HouseNumber,
             postDistrictCode: postCode.Code,
             postDistrictName: postCode.Name,
             eastCoordinate: address.EastCoordinate,
             northCoordinate: address.NorthCoordinate,
-            accessAdddressExternalId: address.OfficialId ?? address.Id.ToString(),
+            accessAdddressExternalId: address.OfficialId ?? id.ToString(),
             townName: address.TownName,
             plotExternalId: address.PlotId,
             roadExternalId: road.OfficialId,
