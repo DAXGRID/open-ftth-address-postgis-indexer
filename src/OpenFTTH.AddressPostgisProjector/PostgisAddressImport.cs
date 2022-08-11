@@ -114,22 +114,39 @@ internal class PostgisAddressImport : IPostgisAddressImport
     {
         using var conn = new NpgsqlConnection(_setting.PostgisConnectionString);
         await conn.OpenAsync().ConfigureAwait(false);
-        using var trans = await conn.BeginTransactionAsync().ConfigureAwait(false);
 
         _logger.LogInformation("Truncate access address table.");
-        await TruncateTable("location.official_access_address", conn)
+        await TruncateTable("location.official_access_address_bulk", conn)
             .ConfigureAwait(false);
 
         _logger.LogInformation("Starting import access addresses.");
         await InsertOfficalAccessAddresses(projection, conn).ConfigureAwait(false);
         _logger.LogInformation("Finished import access addresses.");
 
-        await trans.CommitAsync().ConfigureAwait(false);
+        await RefreshMaterializedView("location.official_access_address", conn)
+            .ConfigureAwait(false);
+
+        _logger.LogInformation("Finished updating view.");
     }
 
-    private static async Task TruncateTable(string tableName, NpgsqlConnection conn)
+    private static async Task RefreshMaterializedView(
+        string viewName,
+        NpgsqlConnection conn)
     {
-        using var truncateCmd = new NpgsqlCommand($"truncate table {tableName}", conn);
+        using var truncateCmd = new NpgsqlCommand(
+           $"REFRESH MATERIALIZED VIEW CONCURRENTLY {viewName}", conn);
+        truncateCmd.CommandTimeout = 60 * 5;
+
+        await truncateCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+    }
+
+    private static async Task TruncateTable(
+        string tableName,
+        NpgsqlConnection conn)
+    {
+        using var truncateCmd = new NpgsqlCommand(
+            $"truncate table {tableName}", conn);
+
         await truncateCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
     }
 
@@ -138,7 +155,7 @@ internal class PostgisAddressImport : IPostgisAddressImport
         NpgsqlConnection conn)
     {
         var query = @"
-                COPY location.official_access_address (
+                COPY location.official_access_address_bulk (
                     id,
                     coord,
                     status,
