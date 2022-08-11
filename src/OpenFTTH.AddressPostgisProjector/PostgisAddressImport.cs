@@ -112,36 +112,30 @@ internal class PostgisAddressImport : IPostgisAddressImport
 
     public async Task Import(AddressPostgisProjection projection)
     {
+        using var conn = new NpgsqlConnection(_setting.PostgisConnectionString);
+        await conn.OpenAsync().ConfigureAwait(false);
+        using var trans = await conn.BeginTransactionAsync().ConfigureAwait(false);
+
+        _logger.LogInformation("Truncate access address table.");
+        await TruncateTable("location.official_access_address", conn)
+            .ConfigureAwait(false);
+
         _logger.LogInformation("Starting import access addresses.");
-        await InsertOfficalAccessAddresses(projection).ConfigureAwait(false);
+        await InsertOfficalAccessAddresses(projection, conn).ConfigureAwait(false);
         _logger.LogInformation("Finished import access addresses.");
+
+        await trans.CommitAsync().ConfigureAwait(false);
     }
 
-    private static OfficialAccessAddress MapAccessAddress(
-        PostCode postCode,
-        Road road,
-        AccessAddress address)
+    private static async Task TruncateTable(string tableName, NpgsqlConnection conn)
     {
-        return new OfficialAccessAddress(
-            id: address.Id,
-            municipalCode: address.MunicipalCode,
-            status: address.Status.ToString(),
-            roadCode: address.RoadCode,
-            houseNumber: address.HouseNumber,
-            postDistrictCode: postCode.Code,
-            postDistrictName: postCode.Name,
-            eastCoordinate: address.EastCoordinate,
-            northCoordinate: address.NorthCoordinate,
-            accessAdddressExternalId: address.OfficialId ?? address.Id.ToString(),
-            townName: address.TownName,
-            plotExternalId: address.PlotId,
-            roadExternalId: road.OfficialId,
-            roadName: road.Name,
-            deleted: address.Deleted);
+        using var truncateCmd = new NpgsqlCommand($"truncate table {tableName}", conn);
+        await truncateCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
     }
 
-    private async Task InsertOfficalAccessAddresses(
-        AddressPostgisProjection projection)
+    private static async Task InsertOfficalAccessAddresses(
+        AddressPostgisProjection projection,
+        NpgsqlConnection conn)
     {
         var query = @"
                 COPY location.official_access_address (
@@ -160,11 +154,10 @@ internal class PostgisAddressImport : IPostgisAddressImport
                     plot_external_id
                 ) FROM STDIN (FORMAT BINARY)";
 
-        using var connection = new NpgsqlConnection(_setting.PostgisConnectionString);
-        await connection.OpenAsync().ConfigureAwait(false);
-
         var wkbWriter = new WKBWriter(ByteOrder.LittleEndian, true, false, false);
-        using var writer = connection.BeginBinaryImport(query);
+
+        using var writer = conn.BeginBinaryImport(query);
+
         foreach (var pAddress in projection.IdToAddress.Values)
         {
             var postCode = projection.IdToPostCode[pAddress.PostCodeId];
@@ -195,6 +188,29 @@ internal class PostgisAddressImport : IPostgisAddressImport
         }
 
         await writer.CompleteAsync().ConfigureAwait(false);
+    }
+
+    private static OfficialAccessAddress MapAccessAddress(
+        PostCode postCode,
+        Road road,
+        AccessAddress address)
+    {
+        return new OfficialAccessAddress(
+            id: address.Id,
+            municipalCode: address.MunicipalCode,
+            status: address.Status.ToString(),
+            roadCode: address.RoadCode,
+            houseNumber: address.HouseNumber,
+            postDistrictCode: postCode.Code,
+            postDistrictName: postCode.Name,
+            eastCoordinate: address.EastCoordinate,
+            northCoordinate: address.NorthCoordinate,
+            accessAdddressExternalId: address.OfficialId ?? address.Id.ToString(),
+            townName: address.TownName,
+            plotExternalId: address.PlotId,
+            roadExternalId: road.OfficialId,
+            roadName: road.Name,
+            deleted: address.Deleted);
     }
 
     private static string GetRootPath(string filePath)
