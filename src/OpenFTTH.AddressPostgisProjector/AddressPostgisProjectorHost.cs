@@ -60,7 +60,9 @@ internal sealed class AddressPostgisProjectorHost : BackgroundService
 
                 if (changes > 0)
                 {
-                    _logger.LogInformation("{Count} changes so we do import.", changes);
+                    _logger.LogInformation("{Count} changes, starting import.", changes);
+                    await _postgisAddressImport.Import(projection).ConfigureAwait(false);
+                    _logger.LogInformation("Finished changes import.", changes);
                 }
                 else
                 {
