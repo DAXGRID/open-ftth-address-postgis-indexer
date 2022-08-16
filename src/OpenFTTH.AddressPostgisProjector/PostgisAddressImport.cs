@@ -153,7 +153,7 @@ internal class PostgisAddressImport : IPostgisAddressImport
 
         using var truncateCmd = new NpgsqlCommand(
            $"REFRESH MATERIALIZED VIEW CONCURRENTLY {viewName}", conn);
-        truncateCmd.CommandTimeout = 60 * 5;
+        truncateCmd.CommandTimeout = 60 * 10;
 
         await truncateCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
     }
