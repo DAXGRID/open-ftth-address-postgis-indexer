@@ -5,10 +5,10 @@ using OpenFTTH.EventSourcing;
 namespace OpenFTTH.AddressPostgisProjector;
 
 internal sealed record PostCode(string Code, string Name);
-internal sealed record Road(string OfficialId, string Name);
+internal sealed record Road(string ExternalId, string Name);
 
 internal sealed record AccessAddress(
-    string? OfficialId,
+    string? ExternalId,
     string MunicipalCode,
     string Status,
     string RoadCode,
@@ -26,7 +26,7 @@ internal sealed record UnitAddress(
     string Status,
     string? FloorName,
     string? SuitName,
-    string? OfficialId,
+    string? ExternalId,
     bool Deleted);
 
 internal sealed class AddressPostgisProjection : ProjectionBase
@@ -110,7 +110,7 @@ internal sealed class AddressPostgisProjection : ProjectionBase
     {
         IdToAccessAddress.Add(
             accessAddressCreated.Id,
-            new(OfficialId: accessAddressCreated.OfficialId,
+            new(ExternalId: accessAddressCreated.ExternalId,
                 MunicipalCode: accessAddressCreated.MunicipalCode,
                 Status: accessAddressCreated.Status.ToString(),
                 RoadCode: accessAddressCreated.RoadCode,
@@ -129,7 +129,7 @@ internal sealed class AddressPostgisProjection : ProjectionBase
         var oldAccessAddress = IdToAccessAddress[accessAddressUpdated.Id];
         IdToAccessAddress[accessAddressUpdated.Id] = oldAccessAddress with
         {
-            OfficialId = accessAddressUpdated.OfficialId,
+            ExternalId = accessAddressUpdated.ExternalId,
             MunicipalCode = accessAddressUpdated.MunicipalCode,
             Status = accessAddressUpdated.Status.ToString(),
             RoadCode = accessAddressUpdated.RoadCode,
@@ -157,7 +157,7 @@ internal sealed class AddressPostgisProjection : ProjectionBase
         IdToUnitAddress.Add(
             unitAddressCreated.Id,
             new UnitAddress(
-                OfficialId: unitAddressCreated.OfficialId,
+                ExternalId: unitAddressCreated.ExternalId,
                 AccessAddresssId: unitAddressCreated.AccessAddressId,
                 Status: unitAddressCreated.Status.ToString(),
                 FloorName: unitAddressCreated.FloorName,
@@ -172,7 +172,7 @@ internal sealed class AddressPostgisProjection : ProjectionBase
         IdToUnitAddress[unitAddressUpdated.Id] = unitAddress with
         {
             AccessAddresssId = unitAddressUpdated.AccessAddressId,
-            OfficialId = unitAddressUpdated.OfficialId,
+            ExternalId = unitAddressUpdated.ExternalId,
             Status = unitAddressUpdated.Status.ToString(),
             FloorName = unitAddressUpdated.FloorName,
             SuitName = unitAddressUpdated.SuitName,
@@ -211,7 +211,7 @@ internal sealed class AddressPostgisProjection : ProjectionBase
 
     private void HandleRoadCreated(RoadCreated roadCreated)
     {
-        var road = new Road(roadCreated.OfficialId, roadCreated.Name);
+        var road = new Road(roadCreated.ExternalId, roadCreated.Name);
         IdToRoad.Add(roadCreated.Id, road);
     }
 

@@ -249,10 +249,10 @@ internal class PostgisAddressImport : IPostgisAddressImport
         using var writer = conn.BeginBinaryImport(query);
         foreach (var (k, pUnitAddress) in projection.IdToUnitAddress)
         {
-            var accessAddressOfficialId = projection
-                .IdToAccessAddress[pUnitAddress.AccessAddresssId].OfficialId;
+            var accessAddressExternalId = projection
+                .IdToAccessAddress[pUnitAddress.AccessAddresssId].ExternalId;
 
-            var unitAddress = MapUnitAddress(k, accessAddressOfficialId, pUnitAddress);
+            var unitAddress = MapUnitAddress(k, accessAddressExternalId, pUnitAddress);
 
             await writer.WriteRowAsync(
                 default,
@@ -284,7 +284,7 @@ internal class PostgisAddressImport : IPostgisAddressImport
             status: address.Status,
             floorName: address.FloorName,
             suitName: address.SuitName,
-            unitAddresssExternalId: address.OfficialId,
+            unitAddresssExternalId: address.ExternalId,
             accessAddressExternalId: accessAddressExternalId,
             deleted: address.Deleted);
     }
@@ -305,10 +305,10 @@ internal class PostgisAddressImport : IPostgisAddressImport
             postDistrictName: postCode.Name,
             eastCoordinate: address.EastCoordinate,
             northCoordinate: address.NorthCoordinate,
-            accessAdddressExternalId: address.OfficialId ?? id.ToString(),
+            accessAdddressExternalId: address.ExternalId ?? id.ToString(),
             townName: address.TownName,
             plotExternalId: address.PlotId,
-            roadExternalId: road.OfficialId,
+            roadExternalId: road.ExternalId,
             roadName: road.Name,
             deleted: address.Deleted);
     }
