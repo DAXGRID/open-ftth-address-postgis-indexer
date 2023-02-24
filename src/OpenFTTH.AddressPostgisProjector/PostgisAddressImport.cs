@@ -201,7 +201,7 @@ internal class PostgisAddressImport : IPostgisAddressImport
             var road = projection.IdToRoad[pAddress.RoadId];
 
             var address = MapAccessAddress(key, postCode, road, pAddress);
-            var point = new Point(address.NorthCoordinate, address.EastCoordinate)
+            var point = new Point(address.EastCoordinate, address.NorthCoordinate)
             {
                 SRID = 25832
             };
