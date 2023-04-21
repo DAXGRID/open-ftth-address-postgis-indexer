@@ -90,7 +90,7 @@ internal sealed record OfficialAccessAddress
     }
 }
 
-internal class PostgisAddressImport : IPostgisAddressImport
+internal sealed class PostgisAddressImport : IPostgisAddressImport
 {
     private readonly Setting _setting;
     private readonly ILogger<PostgisAddressImport> _logger;
@@ -124,10 +124,10 @@ internal class PostgisAddressImport : IPostgisAddressImport
 
         _logger.LogInformation("Starting importing addresses.");
 
-        var insertAccessAddresssesTask = InsertOfficalAccessAddresses(projection);
+        var insertAccessAddressesTask = InsertOfficalAccessAddresses(projection);
         var insertUnitAddressesTask = InsertOfficalUnitAddress(projection);
 
-        await Task.WhenAll(insertAccessAddresssesTask, insertUnitAddressesTask)
+        await Task.WhenAll(insertAccessAddressesTask, insertUnitAddressesTask)
             .ConfigureAwait(false);
 
         _logger.LogInformation("Finished importing addresses.");
@@ -250,7 +250,7 @@ internal class PostgisAddressImport : IPostgisAddressImport
         foreach (var (k, pUnitAddress) in projection.IdToUnitAddress)
         {
             var accessAddressExternalId = projection
-                .IdToAccessAddress[pUnitAddress.AccessAddresssId].ExternalId;
+                .IdToAccessAddress[pUnitAddress.AccessAddressId].ExternalId;
 
             var unitAddress = MapUnitAddress(k, accessAddressExternalId, pUnitAddress);
 
@@ -280,7 +280,7 @@ internal class PostgisAddressImport : IPostgisAddressImport
     {
         return new OfficialUnitAddress(
             id: id,
-            accessAddressId: address.AccessAddresssId,
+            accessAddressId: address.AccessAddressId,
             status: address.Status,
             floorName: address.FloorName,
             suitName: address.SuitName,

@@ -4,8 +4,8 @@ using OpenFTTH.EventSourcing;
 
 namespace OpenFTTH.AddressPostgisProjector;
 
-internal sealed record PostCode(string Code, string Name);
-internal sealed record Road(string ExternalId, string Name);
+internal sealed record PostCode(string Code, string Name, bool Deleted);
+internal sealed record Road(string ExternalId, string Name, bool Deleted);
 
 internal sealed record AccessAddress(
     string? ExternalId,
@@ -22,7 +22,7 @@ internal sealed record AccessAddress(
     bool Deleted);
 
 internal sealed record UnitAddress(
-    Guid AccessAddresssId,
+    Guid AccessAddressId,
     string Status,
     string? FloorName,
     string? SuitName,
@@ -40,19 +40,33 @@ internal sealed class AddressPostgisProjection : ProjectionBase
     public AddressPostgisProjection(ILogger<AddressPostgisProjection> logger)
     {
         ProjectEventAsync<PostCodeCreated>(ProjectAsync);
-        ProjectEventAsync<PostCodeUpdated>(ProjectAsync);
+        ProjectEventAsync<PostCodeNameChanged>(ProjectAsync);
         ProjectEventAsync<PostCodeDeleted>(ProjectAsync);
 
         ProjectEventAsync<RoadCreated>(ProjectAsync);
-        ProjectEventAsync<RoadUpdated>(ProjectAsync);
+        ProjectEventAsync<RoadNameChanged>(ProjectAsync);
+        ProjectEventAsync<RoadExternalIdChanged>(ProjectAsync);
         ProjectEventAsync<RoadDeleted>(ProjectAsync);
 
         ProjectEventAsync<AccessAddressCreated>(ProjectAsync);
-        ProjectEventAsync<AccessAddressUpdated>(ProjectAsync);
+        ProjectEventAsync<AccessAddressExternalIdChanged>(ProjectAsync);
+        ProjectEventAsync<AccessAddressMunicipalCodeChanged>(ProjectAsync);
+        ProjectEventAsync<AccessAddressStatusChanged>(ProjectAsync);
+        ProjectEventAsync<AccessAddressRoadCodeChanged>(ProjectAsync);
+        ProjectEventAsync<AccessAddressHouseNumberChanged>(ProjectAsync);
+        ProjectEventAsync<AccessAddressSupplementaryTownNameChanged>(ProjectAsync);
+        ProjectEventAsync<AccessAddressPlotIdChanged>(ProjectAsync);
+        ProjectEventAsync<AccessAddressRoadIdChanged>(ProjectAsync);
+        ProjectEventAsync<AccessAddressCoordinateChanged>(ProjectAsync);
         ProjectEventAsync<AccessAddressDeleted>(ProjectAsync);
 
         ProjectEventAsync<UnitAddressCreated>(ProjectAsync);
-        ProjectEventAsync<UnitAddressUpdated>(ProjectAsync);
+        ProjectEventAsync<UnitAddressExternalIdChanged>(ProjectAsync);
+        ProjectEventAsync<UnitAddressAccessAddressIdChanged>(ProjectAsync);
+        ProjectEventAsync<UnitAddressStatusChanged>(ProjectAsync);
+        ProjectEventAsync<UnitAddressFloorNameChanged>(ProjectAsync);
+        ProjectEventAsync<UnitAddressSuiteNameChanged>(ProjectAsync);
+        ProjectEventAsync<UnitAddressPendingOfficialChanged>(ProjectAsync);
         ProjectEventAsync<UnitAddressDeleted>(ProjectAsync);
     }
 
@@ -65,8 +79,8 @@ internal sealed class AddressPostgisProjection : ProjectionBase
             case (PostCodeCreated postCodeCreated):
                 HandlePostCodeCreated(postCodeCreated);
                 break;
-            case (PostCodeUpdated postCodeUpdated):
-                HandlePostCodeUpdated(postCodeUpdated);
+            case (PostCodeNameChanged postCodeNameChanged):
+                HandlePostCodeNameChanged(postCodeNameChanged);
                 break;
             case (PostCodeDeleted postCodeDeleted):
                 HandlePostCodeDeleted(postCodeDeleted);
@@ -74,8 +88,11 @@ internal sealed class AddressPostgisProjection : ProjectionBase
             case (RoadCreated roadCreated):
                 HandleRoadCreated(roadCreated);
                 break;
-            case (RoadUpdated roadUpdated):
-                HandleRoadUpdated(roadUpdated);
+            case (RoadNameChanged roadNameChanged):
+                HandleRoadNameChanged(roadNameChanged);
+                break;
+            case (RoadExternalIdChanged roadExternalIdChanged):
+                HandleRoadExternalIdChanged(roadExternalIdChanged);
                 break;
             case (RoadDeleted roadDeleted):
                 HandleRoadDeleted(roadDeleted);
@@ -83,8 +100,32 @@ internal sealed class AddressPostgisProjection : ProjectionBase
             case (AccessAddressCreated accessAddressCreated):
                 HandleAccessAddressCreated(accessAddressCreated);
                 break;
-            case (AccessAddressUpdated accessAddressUpdated):
-                HandleAccessAddressUpdated(accessAddressUpdated);
+            case (AccessAddressExternalIdChanged accessAddressExternalIdChanged):
+                HandleAccessAddressExternalIdChanged(accessAddressExternalIdChanged);
+                break;
+            case (AccessAddressMunicipalCodeChanged accessAddressMunicipalCodeChanged):
+                HandleAccessAddressMunicipalCodeChanged(accessAddressMunicipalCodeChanged);
+                break;
+            case (AccessAddressStatusChanged accessAddressStatusChanged):
+                HandleAccessAddressStatusChanged(accessAddressStatusChanged);
+                break;
+            case (AccessAddressRoadCodeChanged accessAddressRoadCodeChanged):
+                HandleAccessAddressRoadCodeChanged(accessAddressRoadCodeChanged);
+                break;
+            case (AccessAddressHouseNumberChanged accessAddressHouseNumberChanged):
+                HandleAccessAddressHouseNumberChanged(accessAddressHouseNumberChanged);
+                break;
+            case (AccessAddressCoordinateChanged accessAddressCoordinateChanged):
+                HandleAccessAddressCoordinateChanged(accessAddressCoordinateChanged);
+                break;
+            case (AccessAddressSupplementaryTownNameChanged accessAddressSupplementaryTownNameChanged):
+                HandleAccessAddressSupplementaryTownNameChanged(accessAddressSupplementaryTownNameChanged);
+                break;
+            case (AccessAddressPlotIdChanged handleAccessAddressPlotIdChanged):
+                HandleAccessAddressPlotIdChanged(handleAccessAddressPlotIdChanged);
+                break;
+            case (AccessAddressRoadIdChanged handleAccessAddressRoadIdChanged):
+                HandleAccessAddressRoadIdChanged(handleAccessAddressRoadIdChanged);
                 break;
             case (AccessAddressDeleted accessAddressDeleted):
                 HandleAccessAddressDeleted(accessAddressDeleted);
@@ -92,8 +133,20 @@ internal sealed class AddressPostgisProjection : ProjectionBase
             case (UnitAddressCreated unitAddressCreated):
                 HandleUnitAddressCreated(unitAddressCreated);
                 break;
-            case (UnitAddressUpdated unitAddressUpdated):
-                HandleUnitAddressUpdated(unitAddressUpdated);
+            case (UnitAddressExternalIdChanged unitAddressExternalIdChanged):
+                HandleUnitAddressExternalIdChanged(unitAddressExternalIdChanged);
+                break;
+            case (UnitAddressAccessAddressIdChanged unitAddressAccessAddressIdChanged):
+                HandleUnitAddressAccessAddressIdChanged(unitAddressAccessAddressIdChanged);
+                break;
+            case (UnitAddressStatusChanged unitAddressStatusChanged):
+                HandleUnitAddressStatusChanged(unitAddressStatusChanged);
+                break;
+            case (UnitAddressFloorNameChanged unitAddressFloorNameChanged):
+                HandleUnitAddressFloorNameChanged(unitAddressFloorNameChanged);
+                break;
+            case (UnitAddressSuiteNameChanged unitAddressSuiteNameChanged):
+                HandleUnitAddressSuiteNameChanged(unitAddressSuiteNameChanged);
                 break;
             case (UnitAddressDeleted unitAddressDeleted):
                 HandleUnitAddressDeleted(unitAddressDeleted);
@@ -124,22 +177,85 @@ internal sealed class AddressPostgisProjection : ProjectionBase
                 Deleted: false));
     }
 
-    private void HandleAccessAddressUpdated(AccessAddressUpdated accessAddressUpdated)
+    private void HandleAccessAddressExternalIdChanged(AccessAddressExternalIdChanged changedEvent)
     {
-        var oldAccessAddress = IdToAccessAddress[accessAddressUpdated.Id];
-        IdToAccessAddress[accessAddressUpdated.Id] = oldAccessAddress with
+        var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
+        IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
         {
-            ExternalId = accessAddressUpdated.ExternalId,
-            MunicipalCode = accessAddressUpdated.MunicipalCode,
-            Status = accessAddressUpdated.Status.ToString(),
-            RoadCode = accessAddressUpdated.RoadCode,
-            HouseNumber = accessAddressUpdated.HouseNumber,
-            NorthCoordinate = accessAddressUpdated.NorthCoordinate,
-            EastCoordinate = accessAddressUpdated.EastCoordinate,
-            TownName = accessAddressUpdated.TownName,
-            PlotId = accessAddressUpdated.PlotId,
-            RoadId = accessAddressUpdated.RoadId,
-            PostCodeId = accessAddressUpdated.PostCodeId,
+            ExternalId = changedEvent.ExternalId,
+        };
+    }
+
+    private void HandleAccessAddressMunicipalCodeChanged(AccessAddressMunicipalCodeChanged changedEvent)
+    {
+        var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
+        IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
+        {
+            MunicipalCode = changedEvent.MunicipalCode,
+        };
+    }
+
+    private void HandleAccessAddressStatusChanged(AccessAddressStatusChanged changedEvent)
+    {
+        var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
+        IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
+        {
+            Status = changedEvent.Status.ToString(),
+        };
+    }
+
+    private void HandleAccessAddressRoadCodeChanged(AccessAddressRoadCodeChanged changedEvent)
+    {
+        var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
+        IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
+        {
+            RoadCode = changedEvent.RoadCode,
+        };
+    }
+
+    private void HandleAccessAddressHouseNumberChanged(AccessAddressHouseNumberChanged changedEvent)
+    {
+        var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
+        IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
+        {
+            HouseNumber = changedEvent.HouseNumber,
+        };
+    }
+
+    private void HandleAccessAddressCoordinateChanged(AccessAddressCoordinateChanged changedEvent)
+    {
+        var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
+        IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
+        {
+            EastCoordinate = changedEvent.EastCoordinate,
+            NorthCoordinate = changedEvent.NorthCoordinate,
+        };
+    }
+
+    private void HandleAccessAddressSupplementaryTownNameChanged(AccessAddressSupplementaryTownNameChanged changedEvent)
+    {
+        var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
+        IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
+        {
+            TownName = changedEvent.SupplementaryTownName,
+        };
+    }
+
+    private void HandleAccessAddressPlotIdChanged(AccessAddressPlotIdChanged changedEvent)
+    {
+        var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
+        IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
+        {
+            PlotId = changedEvent.PlotId,
+        };
+    }
+
+    private void HandleAccessAddressRoadIdChanged(AccessAddressRoadIdChanged changedEvent)
+    {
+        var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
+        IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
+        {
+            RoadId = changedEvent.RoadId,
         };
     }
 
@@ -158,24 +274,55 @@ internal sealed class AddressPostgisProjection : ProjectionBase
             unitAddressCreated.Id,
             new UnitAddress(
                 ExternalId: unitAddressCreated.ExternalId,
-                AccessAddresssId: unitAddressCreated.AccessAddressId,
+                AccessAddressId: unitAddressCreated.AccessAddressId,
                 Status: unitAddressCreated.Status.ToString(),
                 FloorName: unitAddressCreated.FloorName,
-                SuitName: unitAddressCreated.SuitName,
-                Deleted: false
-            ));
+                SuitName: unitAddressCreated.SuiteName,
+                Deleted: false));
     }
 
-    private void HandleUnitAddressUpdated(UnitAddressUpdated unitAddressUpdated)
+    private void HandleUnitAddressExternalIdChanged(UnitAddressExternalIdChanged unitAddressExternalIdChanged)
     {
-        var unitAddress = IdToUnitAddress[unitAddressUpdated.Id];
-        IdToUnitAddress[unitAddressUpdated.Id] = unitAddress with
+        var unitAddress = IdToUnitAddress[unitAddressExternalIdChanged.Id];
+        IdToUnitAddress[unitAddressExternalIdChanged.Id] = unitAddress with
         {
-            AccessAddresssId = unitAddressUpdated.AccessAddressId,
-            ExternalId = unitAddressUpdated.ExternalId,
-            Status = unitAddressUpdated.Status.ToString(),
-            FloorName = unitAddressUpdated.FloorName,
-            SuitName = unitAddressUpdated.SuitName,
+            ExternalId = unitAddressExternalIdChanged.ExternalId
+        };
+    }
+
+    private void HandleUnitAddressAccessAddressIdChanged(UnitAddressAccessAddressIdChanged unitAddressAccessAddressIdChanged)
+    {
+        var unitAddress = IdToUnitAddress[unitAddressAccessAddressIdChanged.Id];
+        IdToUnitAddress[unitAddressAccessAddressIdChanged.Id] = unitAddress with
+        {
+            AccessAddressId = unitAddressAccessAddressIdChanged.AccessAddressId
+        };
+    }
+
+    private void HandleUnitAddressStatusChanged(UnitAddressStatusChanged unitAddressStatusChanged)
+    {
+        var unitAddress = IdToUnitAddress[unitAddressStatusChanged.Id];
+        IdToUnitAddress[unitAddressStatusChanged.Id] = unitAddress with
+        {
+            Status = unitAddressStatusChanged.Status.ToString()
+        };
+    }
+
+    private void HandleUnitAddressFloorNameChanged(UnitAddressFloorNameChanged unitAddressFloorNameChanged)
+    {
+        var unitAddress = IdToUnitAddress[unitAddressFloorNameChanged.Id];
+        IdToUnitAddress[unitAddressFloorNameChanged.Id] = unitAddress with
+        {
+            FloorName = unitAddressFloorNameChanged.FloorName
+        };
+    }
+
+    private void HandleUnitAddressSuiteNameChanged(UnitAddressSuiteNameChanged unitAddressSuiteNameChanged)
+    {
+        var unitAddress = IdToUnitAddress[unitAddressSuiteNameChanged.Id];
+        IdToUnitAddress[unitAddressSuiteNameChanged.Id] = unitAddress with
+        {
+            SuitName = unitAddressSuiteNameChanged.SuiteName
         };
     }
 
@@ -192,40 +339,57 @@ internal sealed class AddressPostgisProjection : ProjectionBase
     {
         IdToPostCode.Add(
             postCodeCreated.Id,
-            new(postCodeCreated.Number, postCodeCreated.Name));
+            new(postCodeCreated.Number, postCodeCreated.Name, false));
     }
 
-    private void HandlePostCodeUpdated(PostCodeUpdated postCodeUpdated)
+    private void HandlePostCodeNameChanged(PostCodeNameChanged postCodeNameChanged)
     {
-        var postCode = IdToPostCode[postCodeUpdated.Id];
-        IdToPostCode[postCodeUpdated.Id] = postCode with
+        var postCode = IdToPostCode[postCodeNameChanged.Id];
+        IdToPostCode[postCodeNameChanged.Id] = postCode with
         {
-            Name = postCodeUpdated.Name
+            Name = postCodeNameChanged.Name
         };
     }
 
     private void HandlePostCodeDeleted(PostCodeDeleted postCodeDeleted)
     {
-        IdToPostCode.Remove(postCodeDeleted.Id);
+        var postCode = IdToPostCode[postCodeDeleted.Id];
+        IdToPostCode[postCodeDeleted.Id] = postCode with
+        {
+            Deleted = true
+        };
     }
 
     private void HandleRoadCreated(RoadCreated roadCreated)
     {
-        var road = new Road(roadCreated.ExternalId, roadCreated.Name);
+        var road = new Road(roadCreated.ExternalId, roadCreated.Name, false);
         IdToRoad.Add(roadCreated.Id, road);
     }
 
-    private void HandleRoadUpdated(RoadUpdated roadUpdated)
+    private void HandleRoadNameChanged(RoadNameChanged roadNameChanged)
     {
-        var road = IdToRoad[roadUpdated.Id];
-        IdToRoad[roadUpdated.Id] = road with
+        var road = IdToRoad[roadNameChanged.Id];
+        IdToRoad[roadNameChanged.Id] = road with
         {
-            Name = roadUpdated.Name
+            Name = roadNameChanged.Name
+        };
+    }
+
+    private void HandleRoadExternalIdChanged(RoadExternalIdChanged roadExternalIdChanged)
+    {
+        var road = IdToRoad[roadExternalIdChanged.Id];
+        IdToRoad[roadExternalIdChanged.Id] = road with
+        {
+            ExternalId = roadExternalIdChanged.ExternalId
         };
     }
 
     private void HandleRoadDeleted(RoadDeleted roadDeleted)
     {
-        IdToRoad.Remove(roadDeleted.Id);
+        var road = IdToRoad[roadDeleted.Id];
+        IdToRoad[roadDeleted.Id] = road with
+        {
+            Deleted = true
+        };
     }
 }
