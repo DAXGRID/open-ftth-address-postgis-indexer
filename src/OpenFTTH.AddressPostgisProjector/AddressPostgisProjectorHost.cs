@@ -75,10 +75,5 @@ internal sealed class AddressPostgisProjectorHost : BackgroundService
             // Do nothing since this is valid.
             _logger.LogError("Cancellation requested.");
         }
-        catch (Exception ex)
-        {
-            _logger.LogError("{Exception}.", ex);
-            throw;
-        }
     }
 }
