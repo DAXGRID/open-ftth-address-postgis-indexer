@@ -53,20 +53,20 @@ internal sealed class AddressPostgisProjectorHost : BackgroundService
             {
                 await Task.Delay(_catchUpTimeMs, stoppingToken).ConfigureAwait(false);
 
-                _logger.LogInformation("Checking for new events.");
+                _logger.LogDebug("Checking for new events.");
                 var changes = await _eventStore
                     .CatchUpAsync(stoppingToken)
                     .ConfigureAwait(false);
 
                 if (changes > 0)
                 {
-                    _logger.LogInformation("{Count} changes, starting import.", changes);
+                    _logger.LogInformation("{ChangeCount} changes, starting import.", changes);
                     await _postgisAddressImport.Import(projection).ConfigureAwait(false);
-                    _logger.LogInformation("Finished changes import.", changes);
+                    _logger.LogInformation("Finished changes importing {ChangeCount}.", changes);
                 }
                 else
                 {
-                    _logger.LogInformation("No changes since last run.");
+                    _logger.LogDebug("No changes since last run.");
                 }
             }
         }
