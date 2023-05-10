@@ -120,7 +120,7 @@ internal sealed class PostgisAddressImport : IPostgisAddressImport
         await TruncateTable("location.official_unit_address_bulk")
             .ConfigureAwait(false);
 
-        _logger.LogInformation("Finsihed truncate address bulk tables.");
+        _logger.LogInformation("Finished truncate address bulk tables.");
 
         _logger.LogInformation("Starting importing addresses.");
 
