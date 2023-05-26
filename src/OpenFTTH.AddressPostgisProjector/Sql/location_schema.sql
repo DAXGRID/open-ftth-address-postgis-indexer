@@ -2,7 +2,7 @@ CREATE SCHEMA IF NOT EXISTS "location"
     AUTHORIZATION postgres;
 
 -- Create Access address bulk table
-CREATE TABLE IF NOT EXISTS location.official_access_address_bulk (
+CREATE UNLOGGED TABLE IF NOT EXISTS location.official_access_address_bulk (
 	id uuid PRIMARY KEY,
 	coord public.geometry(point, 25832) NULL,
 	status varchar(50) NOT NULL,
@@ -29,7 +29,7 @@ CREATE INDEX IF NOT EXISTS ix_official_access_address_access_address_external_id
 CREATE INDEX IF NOT EXISTS ix_official_access_address_coord ON location.official_access_address USING gist (coord);
 
 -- Create unit address bulk table
-CREATE TABLE IF NOT EXISTS location.official_unit_address_bulk (
+CREATE UNLOGGED TABLE IF NOT EXISTS location.official_unit_address_bulk (
 	id uuid PRIMARY KEY,
 	access_address_id uuid NOT NULL,
 	status varchar(50) NOT NULL,
