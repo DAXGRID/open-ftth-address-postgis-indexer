@@ -10,7 +10,7 @@ internal sealed class AddressPostgisProjectorHost : BackgroundService
     private readonly ILogger<AddressPostgisProjectorHost> _logger;
     private readonly IEventStore _eventStore;
     private readonly IPostgisAddressImport _postgisAddressImport;
-    private const int _catchUpTimeMs = 60000;
+    private const int _catchUpTimeMs = 600_000;
 
     public AddressPostgisProjectorHost(
         ILogger<AddressPostgisProjectorHost> logger,
