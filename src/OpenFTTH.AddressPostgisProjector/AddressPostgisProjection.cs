@@ -102,94 +102,58 @@ internal sealed class AddressPostgisProjection : ProjectionBase
                 HandleRoadDeleted(roadDeleted);
                 break;
             case (AccessAddressCreated accessAddressCreated):
-                HandleAccessAddressCreated(
-                    accessAddressCreated,
-                    eventEnvelope.EventTimestamp);
+                HandleAccessAddressCreated(accessAddressCreated);
                 break;
             case (AccessAddressExternalIdChanged accessAddressExternalIdChanged):
-                HandleAccessAddressExternalIdChanged(
-                    accessAddressExternalIdChanged,
-                    eventEnvelope.EventTimestamp);
+                HandleAccessAddressExternalIdChanged(accessAddressExternalIdChanged);
                 break;
             case (AccessAddressMunicipalCodeChanged accessAddressMunicipalCodeChanged):
-                HandleAccessAddressMunicipalCodeChanged(
-                    accessAddressMunicipalCodeChanged,
-                    eventEnvelope.EventTimestamp);
+                HandleAccessAddressMunicipalCodeChanged(accessAddressMunicipalCodeChanged);
                 break;
             case (AccessAddressStatusChanged accessAddressStatusChanged):
-                HandleAccessAddressStatusChanged(
-                    accessAddressStatusChanged,
-                    eventEnvelope.EventTimestamp);
+                HandleAccessAddressStatusChanged(accessAddressStatusChanged);
                 break;
             case (AccessAddressRoadCodeChanged accessAddressRoadCodeChanged):
-                HandleAccessAddressRoadCodeChanged(
-                    accessAddressRoadCodeChanged,
-                    eventEnvelope.EventTimestamp);
+                HandleAccessAddressRoadCodeChanged(accessAddressRoadCodeChanged);
                 break;
             case (AccessAddressHouseNumberChanged accessAddressHouseNumberChanged):
-                HandleAccessAddressHouseNumberChanged(
-                    accessAddressHouseNumberChanged,
-                    eventEnvelope.EventTimestamp);
+                HandleAccessAddressHouseNumberChanged(accessAddressHouseNumberChanged);
                 break;
             case (AccessAddressCoordinateChanged accessAddressCoordinateChanged):
                 HandleAccessAddressCoordinateChanged(
-                    accessAddressCoordinateChanged,
-                    eventEnvelope.EventTimestamp);
-                break;
+                    accessAddressCoordinateChanged); break;
             case (AccessAddressSupplementaryTownNameChanged accessAddressSupplementaryTownNameChanged):
-                HandleAccessAddressSupplementaryTownNameChanged(
-                    accessAddressSupplementaryTownNameChanged,
-                    eventEnvelope.EventTimestamp);
+                HandleAccessAddressSupplementaryTownNameChanged(accessAddressSupplementaryTownNameChanged);
                 break;
             case (AccessAddressPlotIdChanged handleAccessAddressPlotIdChanged):
-                HandleAccessAddressPlotIdChanged(
-                    handleAccessAddressPlotIdChanged,
-                    eventEnvelope.EventTimestamp);
+                HandleAccessAddressPlotIdChanged(handleAccessAddressPlotIdChanged);
                 break;
             case (AccessAddressRoadIdChanged handleAccessAddressRoadIdChanged):
-                HandleAccessAddressRoadIdChanged(
-                    handleAccessAddressRoadIdChanged,
-                    eventEnvelope.EventTimestamp);
+                HandleAccessAddressRoadIdChanged(handleAccessAddressRoadIdChanged);
                 break;
             case (AccessAddressDeleted accessAddressDeleted):
-                HandleAccessAddressDeleted(
-                    accessAddressDeleted,
-                    eventEnvelope.EventTimestamp);
+                HandleAccessAddressDeleted(accessAddressDeleted);
                 break;
             case (UnitAddressCreated unitAddressCreated):
-                HandleUnitAddressCreated(
-                    unitAddressCreated,
-                    eventEnvelope.EventTimestamp);
+                HandleUnitAddressCreated(unitAddressCreated);
                 break;
             case (UnitAddressExternalIdChanged unitAddressExternalIdChanged):
-                HandleUnitAddressExternalIdChanged(
-                    unitAddressExternalIdChanged,
-                    eventEnvelope.EventTimestamp);
+                HandleUnitAddressExternalIdChanged(unitAddressExternalIdChanged);
                 break;
             case (UnitAddressAccessAddressIdChanged unitAddressAccessAddressIdChanged):
-                HandleUnitAddressAccessAddressIdChanged(
-                    unitAddressAccessAddressIdChanged,
-                    eventEnvelope.EventTimestamp);
+                HandleUnitAddressAccessAddressIdChanged(unitAddressAccessAddressIdChanged);
                 break;
             case (UnitAddressStatusChanged unitAddressStatusChanged):
-                HandleUnitAddressStatusChanged(
-                    unitAddressStatusChanged,
-                    eventEnvelope.EventTimestamp);
+                HandleUnitAddressStatusChanged(unitAddressStatusChanged);
                 break;
             case (UnitAddressFloorNameChanged unitAddressFloorNameChanged):
-                HandleUnitAddressFloorNameChanged(
-                    unitAddressFloorNameChanged,
-                    eventEnvelope.EventTimestamp);
+                HandleUnitAddressFloorNameChanged(unitAddressFloorNameChanged);
                 break;
             case (UnitAddressSuiteNameChanged unitAddressSuiteNameChanged):
-                HandleUnitAddressSuiteNameChanged(
-                    unitAddressSuiteNameChanged,
-                    eventEnvelope.EventTimestamp);
+                HandleUnitAddressSuiteNameChanged(unitAddressSuiteNameChanged);
                 break;
             case (UnitAddressDeleted unitAddressDeleted):
-                HandleUnitAddressDeleted(
-                    unitAddressDeleted,
-                    eventEnvelope.EventTimestamp);
+                HandleUnitAddressDeleted(unitAddressDeleted);
                 break;
             default:
                 throw new ArgumentException(
@@ -199,9 +163,7 @@ internal sealed class AddressPostgisProjection : ProjectionBase
         return Task.CompletedTask;
     }
 
-    private void HandleAccessAddressCreated(
-        AccessAddressCreated accessAddressCreated,
-        DateTime eventTimeStamp)
+    private void HandleAccessAddressCreated(AccessAddressCreated accessAddressCreated)
     {
         IdToAccessAddress.Add(
             accessAddressCreated.Id,
@@ -216,50 +178,42 @@ internal sealed class AddressPostgisProjection : ProjectionBase
                 PlotId: accessAddressCreated.PlotId,
                 RoadId: accessAddressCreated.RoadId,
                 PostCodeId: accessAddressCreated.PostCodeId,
-                Created: eventTimeStamp,
-                Updated: null,
+                Created: accessAddressCreated.ExternalCreatedDate ?? throw new ArgumentException("External created date should never be null."),
+                Updated: accessAddressCreated.ExternalUpdatedDate,
                 Deleted: false));
     }
 
-    private void HandleAccessAddressExternalIdChanged(
-        AccessAddressExternalIdChanged changedEvent,
-        DateTime eventTimeStamp)
+    private void HandleAccessAddressExternalIdChanged(AccessAddressExternalIdChanged changedEvent)
     {
         var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
         IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
         {
             ExternalId = changedEvent.ExternalId,
-            Updated = eventTimeStamp
+            Updated = changedEvent.ExternalUpdatedDate,
         };
     }
 
-    private void HandleAccessAddressMunicipalCodeChanged(
-        AccessAddressMunicipalCodeChanged changedEvent,
-        DateTime eventTimeStamp)
+    private void HandleAccessAddressMunicipalCodeChanged(AccessAddressMunicipalCodeChanged changedEvent)
     {
         var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
         IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
         {
             MunicipalCode = changedEvent.MunicipalCode,
-            Updated = eventTimeStamp
+            Updated = changedEvent.ExternalUpdatedDate
         };
     }
 
-    private void HandleAccessAddressStatusChanged(
-        AccessAddressStatusChanged changedEvent,
-        DateTime eventTimeStamp)
+    private void HandleAccessAddressStatusChanged(AccessAddressStatusChanged changedEvent)
     {
         var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
         IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
         {
             Status = changedEvent.Status.ToString(),
-            Updated = eventTimeStamp
+            Updated = changedEvent.ExternalUpdatedDate
         };
     }
 
-    private void HandleAccessAddressRoadCodeChanged(
-        AccessAddressRoadCodeChanged changedEvent,
-        DateTime eventTimeStamp)
+    private void HandleAccessAddressRoadCodeChanged(AccessAddressRoadCodeChanged changedEvent)
     {
         var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
         IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
@@ -269,82 +223,68 @@ internal sealed class AddressPostgisProjection : ProjectionBase
         };
     }
 
-    private void HandleAccessAddressHouseNumberChanged(
-        AccessAddressHouseNumberChanged changedEvent,
-        DateTime eventTimeStamp)
+    private void HandleAccessAddressHouseNumberChanged(AccessAddressHouseNumberChanged changedEvent)
     {
         var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
         IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
         {
             HouseNumber = changedEvent.HouseNumber,
-            Updated = eventTimeStamp
+            Updated = changedEvent.ExternalUpdatedDate
         };
     }
 
-    private void HandleAccessAddressCoordinateChanged(
-        AccessAddressCoordinateChanged changedEvent,
-        DateTime eventTimeStamp)
+    private void HandleAccessAddressCoordinateChanged(AccessAddressCoordinateChanged changedEvent)
     {
         var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
         IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
         {
             EastCoordinate = changedEvent.EastCoordinate,
             NorthCoordinate = changedEvent.NorthCoordinate,
-            Updated = eventTimeStamp
+            Updated = changedEvent.ExternalUpdatedDate
         };
     }
 
-    private void HandleAccessAddressSupplementaryTownNameChanged(
-        AccessAddressSupplementaryTownNameChanged changedEvent,
-        DateTime eventTimeStamp)
+    private void HandleAccessAddressSupplementaryTownNameChanged(AccessAddressSupplementaryTownNameChanged changedEvent)
     {
         var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
         IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
         {
             TownName = changedEvent.SupplementaryTownName,
-            Updated = eventTimeStamp
+            Updated = changedEvent.ExternalUpdatedDate
         };
     }
 
-    private void HandleAccessAddressPlotIdChanged(
-        AccessAddressPlotIdChanged changedEvent,
-        DateTime eventTimeStamp)
+    private void HandleAccessAddressPlotIdChanged(AccessAddressPlotIdChanged changedEvent)
     {
         var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
         IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
         {
             PlotId = changedEvent.PlotId,
-            Updated = eventTimeStamp
+            Updated = changedEvent.ExternalUpdatedDate
         };
     }
 
-    private void HandleAccessAddressRoadIdChanged(
-        AccessAddressRoadIdChanged changedEvent,
-        DateTime eventTimeStamp)
+    private void HandleAccessAddressRoadIdChanged(AccessAddressRoadIdChanged changedEvent)
     {
         var oldAccessAddress = IdToAccessAddress[changedEvent.Id];
         IdToAccessAddress[changedEvent.Id] = oldAccessAddress with
         {
             RoadId = changedEvent.RoadId,
-            Updated = eventTimeStamp
+            Updated = changedEvent.ExternalUpdatedDate
         };
     }
 
-    private void HandleAccessAddressDeleted(
-        AccessAddressDeleted accessAddressDeleted,
-        DateTime eventTimeStamp)
+    private void HandleAccessAddressDeleted(AccessAddressDeleted accessAddressDeleted)
     {
         var oldAccessAddress = IdToAccessAddress[accessAddressDeleted.Id];
         IdToAccessAddress[accessAddressDeleted.Id] = oldAccessAddress with
         {
             Deleted = true,
-            Updated = eventTimeStamp
+            Updated = accessAddressDeleted.ExternalUpdatedDate
         };
     }
 
-    private void HandleUnitAddressCreated(
-        UnitAddressCreated unitAddressCreated,
-        DateTime eventTimeStamp)
+    private void HandleUnitAddressCreated(UnitAddressCreated unitAddressCreated)
     {
         IdToUnitAddress.Add(
             unitAddressCreated.Id,
@@ -354,80 +294,68 @@ internal sealed class AddressPostgisProjection : ProjectionBase
                 Status: unitAddressCreated.Status.ToString(),
                 FloorName: unitAddressCreated.FloorName,
                 SuitName: unitAddressCreated.SuiteName,
-                Created: eventTimeStamp,
-                Updated: null,
+                Created: unitAddressCreated.ExternalCreatedDate ?? throw new ArgumentException("External created date should never be null."),
+                Updated: unitAddressCreated.ExternalUpdatedDate,
                 Deleted: false));
     }
 
-    private void HandleUnitAddressExternalIdChanged(
-        UnitAddressExternalIdChanged unitAddressExternalIdChanged,
-        DateTime eventTimeStamp)
+    private void HandleUnitAddressExternalIdChanged(UnitAddressExternalIdChanged unitAddressExternalIdChanged)
     {
         var unitAddress = IdToUnitAddress[unitAddressExternalIdChanged.Id];
         IdToUnitAddress[unitAddressExternalIdChanged.Id] = unitAddress with
         {
             ExternalId = unitAddressExternalIdChanged.ExternalId,
-            Updated = eventTimeStamp
+            Updated = unitAddressExternalIdChanged.ExternalUpdatedDate
         };
     }
 
-    private void HandleUnitAddressAccessAddressIdChanged(
-        UnitAddressAccessAddressIdChanged unitAddressAccessAddressIdChanged,
-        DateTime eventTimeStamp)
+    private void HandleUnitAddressAccessAddressIdChanged(UnitAddressAccessAddressIdChanged unitAddressAccessAddressIdChanged)
     {
         var unitAddress = IdToUnitAddress[unitAddressAccessAddressIdChanged.Id];
         IdToUnitAddress[unitAddressAccessAddressIdChanged.Id] = unitAddress with
         {
             AccessAddressId = unitAddressAccessAddressIdChanged.AccessAddressId,
-            Updated = eventTimeStamp
+            Updated = unitAddressAccessAddressIdChanged.ExternalUpdatedDate
         };
     }
 
-    private void HandleUnitAddressStatusChanged(
-        UnitAddressStatusChanged unitAddressStatusChanged,
-        DateTime eventTimeStamp)
+    private void HandleUnitAddressStatusChanged(UnitAddressStatusChanged unitAddressStatusChanged)
     {
         var unitAddress = IdToUnitAddress[unitAddressStatusChanged.Id];
         IdToUnitAddress[unitAddressStatusChanged.Id] = unitAddress with
         {
             Status = unitAddressStatusChanged.Status.ToString(),
-            Updated = eventTimeStamp
+            Updated = unitAddressStatusChanged.ExternalUpdatedDate
         };
     }
 
-    private void HandleUnitAddressFloorNameChanged(
-        UnitAddressFloorNameChanged unitAddressFloorNameChanged,
-        DateTime eventTimeStamp)
+    private void HandleUnitAddressFloorNameChanged(UnitAddressFloorNameChanged unitAddressFloorNameChanged)
     {
         var unitAddress = IdToUnitAddress[unitAddressFloorNameChanged.Id];
         IdToUnitAddress[unitAddressFloorNameChanged.Id] = unitAddress with
         {
             FloorName = unitAddressFloorNameChanged.FloorName,
-            Updated = eventTimeStamp
+            Updated = unitAddressFloorNameChanged.ExternalUpdatedDate
         };
     }
 
-    private void HandleUnitAddressSuiteNameChanged(
-        UnitAddressSuiteNameChanged unitAddressSuiteNameChanged,
-        DateTime eventTimeStamp)
+    private void HandleUnitAddressSuiteNameChanged(UnitAddressSuiteNameChanged unitAddressSuiteNameChanged)
     {
         var unitAddress = IdToUnitAddress[unitAddressSuiteNameChanged.Id];
         IdToUnitAddress[unitAddressSuiteNameChanged.Id] = unitAddress with
         {
             SuitName = unitAddressSuiteNameChanged.SuiteName,
-            Updated = eventTimeStamp
+            Updated = unitAddressSuiteNameChanged.ExternalUpdatedDate
         };
     }
 
-    private void HandleUnitAddressDeleted(
-        UnitAddressDeleted unitAddressDeleted,
-        DateTime eventTimeStamp)
+    private void HandleUnitAddressDeleted(UnitAddressDeleted unitAddressDeleted)
     {
         var unitAddress = IdToUnitAddress[unitAddressDeleted.Id];
         IdToUnitAddress[unitAddressDeleted.Id] = unitAddress with
         {
             Deleted = true,
-            Updated = eventTimeStamp
+            Updated = unitAddressDeleted.ExternalUpdatedDate
         };
     }
 
