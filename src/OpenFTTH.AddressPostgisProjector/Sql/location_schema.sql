@@ -16,6 +16,8 @@ CREATE UNLOGGED TABLE IF NOT EXISTS location.official_access_address_bulk (
 	access_address_external_id varchar(255) NULL,
 	road_external_id varchar(255) NULL,
 	plot_external_id varchar(255) NULL,
+  created timestamptz NOT NULL,
+  updated timestamptz,
 	deleted bool NOT NULL DEFAULT false);
 
 -- Create access address materialized view
@@ -37,6 +39,8 @@ CREATE UNLOGGED TABLE IF NOT EXISTS location.official_unit_address_bulk (
 	suit_name varchar(80) NULL,
 	unit_address_external_id varchar(255) NULL,
 	access_address_external_id varchar(255) NULL,
+  created timestamptz NOT NULL,
+  updated timestamptz,
 	deleted bool NOT NULL DEFAULT false);
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS location.official_unit_address

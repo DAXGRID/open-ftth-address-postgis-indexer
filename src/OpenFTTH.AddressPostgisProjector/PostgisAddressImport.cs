@@ -14,6 +14,8 @@ internal sealed record OfficialUnitAddress
     public string? SuitName { get; init; }
     public string? UnitAddresssExternalId { get; init; }
     public string? AccessAddressExternalId { get; init; }
+    public DateTime Created { get; init; }
+    public DateTime? Updated { get; init; }
     public bool Deleted { get; init; }
 
     public OfficialUnitAddress(
@@ -24,6 +26,8 @@ internal sealed record OfficialUnitAddress
         string? suitName,
         string? unitAddresssExternalId,
         string? accessAddressExternalId,
+        DateTime created,
+        DateTime? updated,
         bool deleted)
     {
         Id = id;
@@ -33,6 +37,8 @@ internal sealed record OfficialUnitAddress
         SuitName = suitName;
         UnitAddresssExternalId = unitAddresssExternalId;
         AccessAddressExternalId = accessAddressExternalId;
+        Created = created;
+        Updated = updated;
         Deleted = deleted;
     }
 }
@@ -53,6 +59,8 @@ internal sealed record OfficialAccessAddress
     public string? PlotExternalId { get; init; }
     public string RoadExternalId { get; init; }
     public string RoadName { get; init; }
+    public DateTime Created { get; init; }
+    public DateTime? Updated { get; init; }
     public bool Deleted { get; init; }
 
     public OfficialAccessAddress(
@@ -70,6 +78,8 @@ internal sealed record OfficialAccessAddress
         string? plotExternalId,
         string roadExternalId,
         string roadName,
+        DateTime created,
+        DateTime? updated,
         bool deleted)
     {
         Id = id;
@@ -86,6 +96,8 @@ internal sealed record OfficialAccessAddress
         PlotExternalId = plotExternalId;
         RoadExternalId = roadExternalId;
         RoadName = roadName;
+        Created = created;
+        Updated = updated;
         Deleted = deleted;
     }
 }
@@ -185,7 +197,10 @@ internal sealed class PostgisAddressImport : IPostgisAddressImport
                     municipal_code,
                     access_address_external_id,
                     road_external_id,
-                    plot_external_id
+                    plot_external_id,
+                    created,
+                    updated,
+                    deleted
                 ) FROM STDIN (FORMAT BINARY)";
 
         var wkbWriter = new WKBWriter(ByteOrder.LittleEndian, true, false, false);
@@ -214,15 +229,16 @@ internal sealed class PostgisAddressImport : IPostgisAddressImport
                 address.HouseNumber,
                 address.RoadCode,
                 address.RoadName,
-                address.TownName is null
-                ? DBNull.Value : address.TownName,
+                address.TownName is null ? DBNull.Value : address.TownName,
                 address.PostDistrictCode,
                 address.PostDistrictName,
                 address.MunicipalCode,
                 address.AccessAdddressExternalId,
                 address.RoadExternalId,
-                address.PlotExternalId is null
-                ? DBNull.Value : address.PlotExternalId
+                address.PlotExternalId is null ? DBNull.Value : address.PlotExternalId,
+                address.Created,
+                address.Updated is null ? DBNull.Value : address.Updated,
+                address.Deleted
             ).ConfigureAwait(false);
         }
 
@@ -240,6 +256,8 @@ internal sealed class PostgisAddressImport : IPostgisAddressImport
                     suit_name,
                     unit_address_external_id,
                     access_address_external_id,
+                    created,
+                    updated,
                     deleted
                 ) FROM STDIN (FORMAT BINARY)";
 
@@ -259,14 +277,12 @@ internal sealed class PostgisAddressImport : IPostgisAddressImport
                 unitAddress.Id,
                 unitAddress.AccessAddressId,
                 unitAddress.Status,
-                unitAddress.FloorName is null
-                ? DBNull.Value : unitAddress.FloorName,
-                unitAddress.SuitName is null
-                ? DBNull.Value : unitAddress.SuitName,
-                unitAddress.UnitAddresssExternalId is null
-                ? DBNull.Value : unitAddress.UnitAddresssExternalId,
-                unitAddress.AccessAddressExternalId is null
-                ? DBNull.Value : unitAddress.AccessAddressExternalId,
+                unitAddress.FloorName is null ? DBNull.Value : unitAddress.FloorName,
+                unitAddress.SuitName is null ? DBNull.Value : unitAddress.SuitName,
+                unitAddress.UnitAddresssExternalId is null ? DBNull.Value : unitAddress.UnitAddresssExternalId,
+                unitAddress.AccessAddressExternalId is null ? DBNull.Value : unitAddress.AccessAddressExternalId,
+                unitAddress.Created,
+                unitAddress.Updated is null ? DBNull.Value : unitAddress.Updated,
                 unitAddress.Deleted).ConfigureAwait(false);
         }
 
@@ -286,6 +302,8 @@ internal sealed class PostgisAddressImport : IPostgisAddressImport
             suitName: address.SuitName,
             unitAddresssExternalId: address.ExternalId,
             accessAddressExternalId: accessAddressExternalId,
+            created: address.Created,
+            updated: address.Updated,
             deleted: address.Deleted);
     }
 
@@ -310,6 +328,8 @@ internal sealed class PostgisAddressImport : IPostgisAddressImport
             plotExternalId: address.PlotId,
             roadExternalId: road.ExternalId,
             roadName: road.Name,
+            created: address.Created,
+            updated: address.Updated,
             deleted: address.Deleted);
     }
 
