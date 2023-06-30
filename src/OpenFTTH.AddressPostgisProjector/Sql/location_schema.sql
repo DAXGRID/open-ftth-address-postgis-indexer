@@ -52,4 +52,4 @@ CREATE INDEX IF NOT EXISTS  ix_official_unit_address_access_address_external_id 
 
 CREATE INDEX IF NOT EXISTS ix_official_unit_address_access_address_id ON location.official_unit_address USING btree (access_address_id);
 
-CREATE UNIQUE INDEX IF NOT EXISTS  "IX_official_unit_address_unit_address_external_id" ON location.official_unit_address USING btree (unit_address_external_id);
+CREATE INDEX IF NOT EXISTS  "IX_official_unit_address_unit_address_external_id" ON location.official_unit_address USING btree (unit_address_external_id);
