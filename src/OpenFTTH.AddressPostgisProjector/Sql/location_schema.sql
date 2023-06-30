@@ -1,5 +1,4 @@
-CREATE SCHEMA IF NOT EXISTS "location"
-    AUTHORIZATION postgres;
+CREATE SCHEMA IF NOT EXISTS "location";
 
 -- Create Access address bulk table
 CREATE UNLOGGED TABLE IF NOT EXISTS location.official_access_address_bulk (
